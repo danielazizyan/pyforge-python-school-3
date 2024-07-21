@@ -22,15 +22,9 @@ def substructure_search(mols, mol):
         molecule = Chem.MolFromSmiles(smiles)
 
         if molecule is None:
-            print(f"Invalid SMILES string: {smiles}")
-            continue
+            raise ValueError(f"Invalid SMILES string: {smiles}")
 
         if molecule.HasSubstructMatch(substructure):
             matches.append(smiles)
 
     return matches
-
-print(substructure_search(["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "c1ccccc1")) 
-#["c1ccccc1", "CC(=O)Oc1ccccc1C(=O)O"]
-
-
