@@ -21,6 +21,22 @@ smiles_db = [
 ]
 
 
+def validate_smiles(smiles: str):
+
+    """
+    Validates a SMILES string to ensure it can be correctly parsed into a molecule.
+
+    Parameters:
+    - smiles: The SMILES string to be validated.
+
+    Raises:
+    - ValueError: If the SMILES string cannot be parsed into a molecule.
+    """
+
+    if Chem.MolFromSmiles(smiles) is None:
+        raise ValueError(f"Invalid SMILES string: {smiles}")
+
+
 
 @app.get("/molecules", tags=["Molecules"], summary="List all molecules", response_description="A list of all molecules in the database")
 def list_molecules():
@@ -50,8 +66,10 @@ def add_molecule(molecule: dict):
         if mol["mol_id"] == molecule["mol_id"]:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Molecule with this ID already exists.")
     
-    if Chem.MolFromSmiles(molecule["smiles"]) is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid SMILES string: {molecule["smiles"]}.")
+    try:
+        validate_smiles(molecule["smiles"])
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     
     smiles_db.append(molecule)
     return molecule
@@ -95,8 +113,10 @@ def update_molecule(mol_id: int, updated_molecule: dict):
     for index, molecule in enumerate(smiles_db):
         if molecule["mol_id"] == mol_id:
 
-            if Chem.MolFromSmiles(updated_molecule["smiles"]) is None:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid SMILES string: {updated_molecule["smiles"]}.")
+            try:
+                validate_smiles(updated_molecule["smiles"])
+            except ValueError as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
             
             smiles_db[index] = updated_molecule
             return updated_molecule
@@ -159,16 +179,14 @@ def substructure_search(mols, substructure_smiles):
     list of str: List of molecule SMILES strings containing the given substructure.
     """
 
+    validate_smiles(substructure_smiles)
     substructure = Chem.MolFromSmiles(substructure_smiles)
-    if substructure is None:
-        raise ValueError(f"Invalid SMILES string: {substructure_smiles}")
+
 
     matches = []
     for smiles in mols:
+        validate_smiles(smiles)
         molecule = Chem.MolFromSmiles(smiles)
-
-        if molecule is None:
-            raise ValueError(f"Invalid SMILES string: {smiles}")
 
         if molecule.HasSubstructMatch(substructure):
             matches.append(smiles)
