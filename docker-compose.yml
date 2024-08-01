@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   web1:
     build: ./src
@@ -13,7 +14,7 @@ services:
       - ./src:/src
     environment:
       SERVER_ID: SERVER-2
-      
+
   nginx:
     image: nginx:latest
     ports:
