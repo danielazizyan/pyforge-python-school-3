@@ -34,7 +34,7 @@ def validate_smiles(smiles: str):
     - ValueError: If the SMILES string cannot be parsed into a molecule.
     """
 
-    if Chem.MolFromSmiles(smiles) is None:
+    if not smiles or Chem.MolFromSmiles(smiles) is None:
         raise ValueError(f"Invalid SMILES string: {smiles}")
     
 
