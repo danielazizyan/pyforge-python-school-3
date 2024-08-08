@@ -1,3 +1,4 @@
+from os import getenv
 from fastapi import FastAPI, status, HTTPException
 from rdkit import Chem
 
@@ -33,9 +34,13 @@ def validate_smiles(smiles: str):
     - ValueError: If the SMILES string cannot be parsed into a molecule.
     """
 
-    if Chem.MolFromSmiles(smiles) is None:
+    if not smiles or Chem.MolFromSmiles(smiles) is None:
         raise ValueError(f"Invalid SMILES string: {smiles}")
+    
 
+@app.get("/")
+def get_server():
+    return {"server_id": getenv("SERVER_ID", "1")}
 
 
 @app.get("/molecules", tags=["Molecules"], summary="List all molecules", response_description="A list of all molecules in the database")
