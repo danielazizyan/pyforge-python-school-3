@@ -16,6 +16,7 @@ def reset_smiles_db():
 def client():
     return TestClient(app)
 
+
 @pytest.mark.parametrize(
     "mols, substructure_smiles, expected",
     [
@@ -28,14 +29,15 @@ def client():
         ([], "C", [])
     ]
 )
-
 def test_substructure_search(mols, substructure_smiles, expected):
+    """Test substructure search functionality."""
     if expected == ValueError:
         with pytest.raises(ValueError):
             substructure_search(mols, substructure_smiles)
     else:
         result = substructure_search(mols, substructure_smiles)
         assert result == expected
+
 
 @pytest.mark.parametrize(
     "smiles, should_raise",
@@ -48,6 +50,7 @@ def test_substructure_search(mols, substructure_smiles, expected):
     ]
 )
 def test_validate_smiles(smiles, should_raise):
+    """Test SMILES string validation."""
     if should_raise:
         with pytest.raises(ValueError):
             validate_smiles(smiles)
@@ -56,23 +59,40 @@ def test_validate_smiles(smiles, should_raise):
 
 
 def test_list_molecules(client):
+    """Test listing all molecules."""
     response = client.get("/molecules")
     assert response.status_code == 200
     assert len(response.json()) == len(smiles_db)
 
 def test_get_molecule(client):
+    """Test retrieving a specific molecule by ID."""
     response = client.get("/molecules/1")
     assert response.status_code == 200
     assert response.json() == smiles_db[0]
 
+def test_get_molecule_not_found(client):
+    """Test retrieving a non-existent molecule by ID."""
+    response = client.get("/molecules/999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Molecule Not Found"}
+
 
 def test_add_molecule(client):
+    """Test adding a new molecule."""
     new_molecule = {"mol_id": 15, "name": "New Molecule", "smiles": "CCO"}
     response = client.post("/add", json=new_molecule)
     assert response.status_code == 201
     assert response.json() == new_molecule
 
+def test_add_molecule_existing_id(client):
+    """Test adding a molecule with an existing ID."""
+    existing_molecule = {"mol_id": 1, "name": "Duplicate Ethanol", "smiles": "CCO"}
+    response = client.post("/add", json=existing_molecule)
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Molecule with this ID already exists."}
+
 def test_add_molecule_invalid_smiles(client):
+    """Test adding a molecule with invalid SMILES."""
     new_molecule = {"mol_id": 16, "name": "Invalid Molecule", "smiles": "invalid_smiles"}
     response = client.post("/add", json=new_molecule)
     assert response.status_code == 400
@@ -80,21 +100,37 @@ def test_add_molecule_invalid_smiles(client):
 
 
 def test_update_molecule(client):
+    """Test updating an existing molecule."""
     updated_molecule = {"mol_id": 1, "name": "Updated Ethanol", "smiles": "CCO"}
     response = client.put("/molecules/1", json=updated_molecule)
     assert response.status_code == 200
     assert response.json() == updated_molecule
 
+def test_update_molecule_not_found(client):
+    """Test updating a non-existent molecule."""
+    updated_molecule = {"mol_id": 999, "name": "Nonexistent Molecule", "smiles": "CCO"}
+    response = client.put("/molecules/999", json=updated_molecule)
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Molecule Not Found"}
+
 
 def test_delete_molecule(client):
+    """Test deleting an existing molecule."""
     response = client.delete("/molecules/1")
     assert response.status_code == 200
     assert response.json() == {"mol_id": 1, "name": "Ethanol", "smiles": "CCO"}
     response = client.get("/molecules/1")
     assert response.status_code == 404
 
+def test_delete_molecule_not_found(client):
+    """Test deleting a non-existent molecule."""
+    response = client.delete("/molecules/999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Molecule Not Found"}
+
 
 def test_search_molecule(client):
+    """Test searching molecules by substructure."""
     response = client.get("/search?substructure_smiles=c1ccccc1")
     assert response.status_code == 200
     assert len(response.json()) > 0
