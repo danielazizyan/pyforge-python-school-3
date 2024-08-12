@@ -40,6 +40,11 @@ def validate_smiles(smiles: str):
 
 @app.get("/")
 def get_server():
+
+    """
+    Retrieve the server ID.
+    """
+
     return {"server_id": getenv("SERVER_ID", "1")}
 
 
