@@ -36,14 +36,24 @@ def validate_smiles(smiles: str):
 
     if not smiles or Chem.MolFromSmiles(smiles) is None:
         raise ValueError(f"Invalid SMILES string: {smiles}")
-    
+
 
 @app.get("/")
 def get_server():
+
+    """
+    Retrieve the server ID.
+    """
+
     return {"server_id": getenv("SERVER_ID", "1")}
 
 
-@app.get("/molecules", tags=["Molecules"], summary="List all molecules", response_description="A list of all molecules in the database")
+@app.get(
+        "/molecules",
+        tags=["Molecules"],
+        summary="List all molecules",
+        response_description="A list of all molecules in the database"
+        )
 def list_molecules():
 
     """
@@ -53,8 +63,12 @@ def list_molecules():
     return smiles_db
 
 
-
-@app.post("/add", status_code=status.HTTP_201_CREATED, tags=["Molecules"], summary="Add a new molecule", response_description="Molecule has been added")
+@app.post(
+        "/add",
+        status_code=status.HTTP_201_CREATED,
+        tags=["Molecules"], summary="Add a new molecule",
+        response_description="Molecule has been added"
+        )
 def add_molecule(molecule: dict):
 
     """
@@ -69,19 +83,26 @@ def add_molecule(molecule: dict):
 
     for mol in smiles_db:
         if mol["mol_id"] == molecule["mol_id"]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Molecule with this ID already exists.")
-    
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Molecule with this ID already exists."
+                )
+
     try:
         validate_smiles(molecule["smiles"])
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    
+
     smiles_db.append(molecule)
     return molecule
 
 
-
-@app.get("/molecules/{mol_id}", tags=["Molecules"], summary="Get a molecule by ID", response_description="The molecule has been retrieved")
+@app.get(
+        "/molecules/{mol_id}",
+        tags=["Molecules"],
+        summary="Get a molecule by ID",
+        response_description="The molecule has been retrieved"
+        )
 def get_molecule(mol_id: int):
 
     """
@@ -97,11 +118,17 @@ def get_molecule(mol_id: int):
     for molecule in smiles_db:
         if molecule["mol_id"] == mol_id:
             return molecule
-    raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Molecule Not Found")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Molecule Not Found"
+        )
 
 
-
-@app.put("/molecules/{mol_id}", tags=["Molecules"], summary="Update a molecule by ID", response_description="The molecule has been updated")
+@app.put(
+        "/molecules/{mol_id}",
+        tags=["Molecules"],
+        summary="Update a molecule by ID",
+        response_description="The molecule has been updated"
+        )
 def update_molecule(mol_id: int, updated_molecule: dict):
 
     """
@@ -114,22 +141,30 @@ def update_molecule(mol_id: int, updated_molecule: dict):
     Returns:
     - The updated molecule.
     """
-       
+
     for index, molecule in enumerate(smiles_db):
         if molecule["mol_id"] == mol_id:
 
             try:
                 validate_smiles(updated_molecule["smiles"])
             except ValueError as e:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-            
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+                    )
+
             smiles_db[index] = updated_molecule
             return updated_molecule
-    raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Molecule Not Found")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Molecule Not Found"
+        )
 
 
-
-@app.delete("/molecules/{mol_id}", tags=["Molecules"], summary="Delete a molecule by ID", response_description="Molecule has been deleted")
+@app.delete(
+        "/molecules/{mol_id}",
+        tags=["Molecules"],
+        summary="Delete a molecule by ID",
+        response_description="Molecule has been deleted"
+        )
 def delete_molecule(mol_id: int):
 
     """
@@ -146,11 +181,19 @@ def delete_molecule(mol_id: int):
         if molecule["mol_id"] == mol_id:
             deleted_molecule = smiles_db.pop(index)
             return deleted_molecule
-    raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Molecule Not Found")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Molecule Not Found"
+        )
 
 
-
-@app.get("/search", tags=["Molecules"], summary="Substructure search for molecules", response_description="A list of molecules containing the given substructure has been retrieved")
+@app.get(
+        "/search",
+        tags=["Molecules"],
+        summary="Substructure search for molecules",
+        response_description=(
+            "Retrieved a list of molecules containing the given substructure"
+        )
+        )
 def search_molecule(substructure_smiles: str):
 
     """
@@ -169,8 +212,8 @@ def search_molecule(substructure_smiles: str):
         matches = [mol for mol in smiles_db if mol["smiles"] in matching_smiles]
         return matches
     except ValueError as e:
-            raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail=str(e))
-    
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 
 def substructure_search(mols, substructure_smiles):
     """
@@ -186,7 +229,6 @@ def substructure_search(mols, substructure_smiles):
 
     validate_smiles(substructure_smiles)
     substructure = Chem.MolFromSmiles(substructure_smiles)
-
 
     matches = []
     for smiles in mols:

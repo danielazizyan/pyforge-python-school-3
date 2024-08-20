@@ -1,6 +1,13 @@
 venv/
 
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.pyo
 
 .env
+
+.pytest_cache/
+
+*.log

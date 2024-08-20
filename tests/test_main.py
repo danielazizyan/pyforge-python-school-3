@@ -11,6 +11,7 @@ def reset_smiles_db():
     smiles_db.clear()
     smiles_db.extend(initial_state)
 
+
 # Fixture for the FastAPI test client
 @pytest.fixture
 def client():
@@ -20,9 +21,21 @@ def client():
 @pytest.mark.parametrize(
     "mols, substructure_smiles, expected",
     [
-        (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "C", ["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"]),
-        (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "c1ccccc1", ["c1ccccc1", "CC(=O)Oc1ccccc1C(=O)O"]),
-        (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "O", ["CCO", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"]),
+        (
+            ["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"],
+            "C",
+            ["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"]
+        ),
+        (
+            ["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"],
+            "c1ccccc1",
+            ["c1ccccc1", "CC(=O)Oc1ccccc1C(=O)O"]
+        ),
+        (
+            ["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"],
+            "O",
+            ["CCO", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"]
+        ),
         (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "N", []),
         (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "", ValueError),
         (["CCO", "c1ccccc1", "CC(=O)O", "CC(=O)Oc1ccccc1C(=O)O"], "invalid", ValueError),
@@ -42,9 +55,9 @@ def test_substructure_search(mols, substructure_smiles, expected):
 @pytest.mark.parametrize(
     "smiles, should_raise",
     [
-        ("CCO", False), 
-        ("c1ccccc1", False),  
-        ("CC(=O)O", False), 
+        ("CCO", False),
+        ("c1ccccc1", False),
+        ("CC(=O)O", False),
         ("invalid_smiles", True),
         ("", True)
     ]
@@ -64,11 +77,13 @@ def test_list_molecules(client):
     assert response.status_code == 200
     assert len(response.json()) == len(smiles_db)
 
+
 def test_get_molecule(client):
     """Test retrieving a specific molecule by ID."""
     response = client.get("/molecules/1")
     assert response.status_code == 200
     assert response.json() == smiles_db[0]
+
 
 def test_get_molecule_not_found(client):
     """Test retrieving a non-existent molecule by ID."""
@@ -84,12 +99,14 @@ def test_add_molecule(client):
     assert response.status_code == 201
     assert response.json() == new_molecule
 
+
 def test_add_molecule_existing_id(client):
     """Test adding a molecule with an existing ID."""
     existing_molecule = {"mol_id": 1, "name": "Duplicate Ethanol", "smiles": "CCO"}
     response = client.post("/add", json=existing_molecule)
     assert response.status_code == 400
     assert response.json() == {"detail": "Molecule with this ID already exists."}
+
 
 def test_add_molecule_invalid_smiles(client):
     """Test adding a molecule with invalid SMILES."""
@@ -106,6 +123,7 @@ def test_update_molecule(client):
     assert response.status_code == 200
     assert response.json() == updated_molecule
 
+
 def test_update_molecule_not_found(client):
     """Test updating a non-existent molecule."""
     updated_molecule = {"mol_id": 999, "name": "Nonexistent Molecule", "smiles": "CCO"}
@@ -121,6 +139,7 @@ def test_delete_molecule(client):
     assert response.json() == {"mol_id": 1, "name": "Ethanol", "smiles": "CCO"}
     response = client.get("/molecules/1")
     assert response.status_code == 404
+
 
 def test_delete_molecule_not_found(client):
     """Test deleting a non-existent molecule."""
