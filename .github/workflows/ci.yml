@@ -43,6 +43,9 @@ jobs:
     - name: Run migrations
       run: alembic upgrade head
 
+    - name: Populate database
+      run: python populate_db.py
+
     - name: Run tests
       run: pytest
 
