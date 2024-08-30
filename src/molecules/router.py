@@ -15,6 +15,17 @@ router = APIRouter(prefix="/molecules", tags=["molecules"])
 async def get_all_molecules(
     request_body: RBMolecule = Depends(),
 ) -> list[MoleculeResponse]:
+
+    """
+    Retrieve a list of all molecules in the database.
+
+    Parameters:
+    - request_body: A request body model (RBMolecule) containing filters for the query.
+
+    Returns:
+    - A list of MoleculeResponse objects that match the query filters.
+    """
+
     return await MoleculeDAO.find_all_molecules(**request_body.to_dict())
 
 
@@ -24,6 +35,20 @@ async def get_all_molecules(
         response_description="List of molecules that match the substructure"
         )
 async def search_molecule(substructure_smiles: str):
+
+    """
+    Search for molecules containing a specific substructure.
+
+    Parameters:
+    - substructure_smiles: The SMILES string representing the substructure to search for.
+
+    Returns:
+    - A list of molecules that contain the given substructure.
+
+    Raises:
+    - HTTPException: If the SMILES string is invalid or if no molecules are found.
+    """
+
     try:
         if Chem.MolFromSmiles(substructure_smiles) is None:
             raise HTTPException(
@@ -54,6 +79,20 @@ async def search_molecule(substructure_smiles: str):
         response_description="The molecule data"
         )
 async def get_molecule_by_id(mol_id: int) -> MoleculeResponse | dict:
+
+    """
+    Retrieve a molecule by its ID.
+
+    Parameters:
+    - mol_id: The ID of the molecule to retrieve.
+
+    Returns:
+    - A MoleculeResponse object containing the molecule's data, or a dictionary.
+
+    Raises:
+    - HTTPException: If the molecule with the specified ID is not found.
+    """
+
     rez = await MoleculeDAO.find_full_data(mol_id=mol_id)
     if rez is None:
         raise HTTPException(
@@ -69,6 +108,20 @@ async def get_molecule_by_id(mol_id: int) -> MoleculeResponse | dict:
         response_description="The added molecule data"
         )
 async def add_molecule(molecule: MoleculeAdd) -> dict:
+
+    """
+    Add a new molecule to the database.
+
+    Parameters:
+    - molecule: A MoleculeAdd object containing the data for the new molecule.
+
+    Returns:
+    - A confirmation message and the data of the added molecule.
+
+    Raises:
+    - HTTPException: If there is an error adding the molecule.
+    """
+
     check = await MoleculeDAO.add_molecule(**molecule.model_dump())
     if check:
         return {"message": "The molecule is added!", "molecule": molecule}
@@ -85,6 +138,20 @@ async def add_molecule(molecule: MoleculeAdd) -> dict:
         response_description="Confirmation of deletion"
         )
 async def delete_molecule_by_id(mol_id: int) -> dict:
+
+    """
+    Delete a molecule from the database by its ID.
+
+    Parameters:
+    - mol_id: The ID of the molecule to delete.
+
+    Returns:
+    - A confirmation message indicating the molecule has been deleted.
+
+    Raises:
+    - HTTPException: If the molecule with the specified ID is not found.
+    """
+
     check = await MoleculeDAO.delete_molecule_by_id(mol_id=mol_id)
     if check:
         return {"message": f"The molecule with id {mol_id} is deleted!"}
@@ -101,6 +168,19 @@ async def delete_molecule_by_id(mol_id: int) -> dict:
         response_description="Confirmation of update"
         )
 async def update_molecule(mol_id: int, molecule: MoleculeUpdate) -> dict:
+    """
+    Update the data of a molecule by its ID.
+
+    Parameters:
+    - mol_id: The ID of the molecule to update.
+    - molecule: A MoleculeUpdate object containing the updated molecule data.
+
+    Returns:
+    - A confirmation message indicating the molecule has been updated.
+
+    Raises:
+    - HTTPException: If the molecule with the specified ID is not found.
+    """
     check = await MoleculeDAO.update_molecule(mol_id=mol_id, **molecule.model_dump())
     if check:
         return {"message": f"The molecule with id {mol_id} has been updated!"}
