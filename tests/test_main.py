@@ -15,6 +15,40 @@ def event_loop():
     loop.close()
 
 
+@pytest.fixture
+async def setup_molecules():
+    molecules_data = [
+        {"name": "Molecule1", "smiles": "C=C"},
+        {"name": "Molecule2", "smiles": "C#C"},
+        {"name": "Molecule3", "smiles": "C#N"}
+    ]
+    async with async_session_maker() as session:
+        await session.execute(
+            delete(Molecule).where(
+                Molecule.smiles.in_([molecule["smiles"] for molecule in molecules_data])
+            )
+        )
+        await session.commit()
+
+        for molecule_data in molecules_data:
+            new_molecule = Molecule(
+                                name=molecule_data["name"],
+                                smiles=molecule_data["smiles"]
+                            )
+            session.add(new_molecule)
+        await session.commit()
+
+    yield molecules_data
+
+    async with async_session_maker() as session:
+        await session.execute(
+            delete(Molecule).where(
+                Molecule.smiles.in_([molecule["smiles"] for molecule in molecules_data])
+            )
+        )
+        await session.commit()
+
+
 @pytest.mark.asyncio(loop_scope="module")
 async def test_get_server_id():
     async with AsyncClient(
@@ -28,7 +62,7 @@ async def test_get_server_id():
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_get_all_molecules():
+async def test_get_all_molecules(setup_molecules):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver"
@@ -41,6 +75,20 @@ async def test_get_all_molecules():
         assert all("mol_id" in molecule for molecule in data)
         assert all("name" in molecule for molecule in data)
         assert all("smiles" in molecule for molecule in data)
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_get_all_molecules_with_limit(setup_molecules):
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver"
+    ) as ac:
+
+        response = await ac.get("/molecules/", params={"limit": 2})
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 2  # Check that only 2 molecules are returned
 
 
 @pytest.mark.asyncio(loop_scope="module")
@@ -212,32 +260,11 @@ async def test_delete_molecule_by_id():
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_search_molecule():
-    # Data for two molecules
-    molecule_data1 = {"name": "Molecule1", "smiles": "C=C"}
-    molecule_data2 = {"name": "Molecule2", "smiles": "C#N"}
-
-    async with async_session_maker() as session:
-        await session.execute(
-            delete(Molecule).where(
-                Molecule.smiles.in_([
-                    molecule_data1["smiles"],
-                    molecule_data2["smiles"]
-                ])
-            )
-        )
-        await session.commit()
-
+async def test_search_molecule(setup_molecules):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver"
     ) as ac:
-        response = await ac.post("/molecules/add/", json=molecule_data1)
-        assert response.status_code == 200
-
-        response = await ac.post("/molecules/add/", json=molecule_data2)
-        assert response.status_code == 200
-
         search_params = {"substructure_smiles": "C"}
         response = await ac.get("/molecules/search", params=search_params)
 
@@ -252,8 +279,9 @@ async def test_search_molecule():
         await session.execute(
             delete(Molecule).where(
                 Molecule.smiles.in_([
-                    molecule_data1["smiles"],
-                    molecule_data2["smiles"]
+                    "C=C",
+                    "C#C",
+                    "C#N"
                 ])
             )
         )

@@ -4,16 +4,22 @@ services:
   web1:
     build: ./src
     volumes:
-      - ./src:/src
+      - ./src:/app/src
     environment:
       SERVER_ID: SERVER-1
+      PYTHONPATH: /app 
+    env_file:
+      - .env
 
   web2:
     build: ./src
     volumes:
-      - ./src:/src
+      - ./src:/app/src
     environment:
       SERVER_ID: SERVER-2
+      PYTHONPATH: /app 
+    env_file:
+      - .env
 
   nginx:
     image: nginx:latest
