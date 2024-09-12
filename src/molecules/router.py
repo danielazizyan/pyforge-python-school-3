@@ -35,7 +35,7 @@ async def get_all_molecules(
     molecule_list = []
 
     async for molecule in MoleculeDAO.find_all_molecules(limit=limit):
-        molecule_list.append(MoleculeResponse(**molecule.__dict__))
+        molecule_list.append(MoleculeResponse.model_validate(molecule))
 
     logger.info(f"Fetched {len(molecule_list)} molecules.")
     return molecule_list

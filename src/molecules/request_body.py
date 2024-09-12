@@ -1,20 +1,29 @@
-class RBMolecule:
-    def __init__(
-        self,
-        mol_id: int | None = None,
-        name: str | None = None,
-        smiles: str | None = None,
-    ):
-        self.mol_id = mol_id
-        self.name = name
-        self.smiles = smiles
+from pydantic import BaseModel, Field
+from typing import Optional
 
-    def to_dict(self) -> dict:
-        data = {
-            "mol_id": self.mol_id,
-            "name": self.name,
-            "smiles": self.smiles,
-        }
-        # Dict copy to avoid dict change while iteration
-        filtered_data = {key: value for key, value in data.items() if value is not None}
-        return filtered_data
+
+class RBMolecule(BaseModel):
+
+    """
+    Pydantic model for the request body when working with Molecules.
+
+    Attributes:
+        mol_id (Optional[int]): The molecule ID (optional).
+        name (Optional[str]): The name of the molecule.
+        smiles (Optional[str]): The SMILES string representation of the molecule.
+    """
+
+    mol_id: Optional[int] = Field(
+                                None,
+                                description="The molecule ID"
+                            )
+    name: Optional[str] = Field(
+                                None,
+                                description="The name of the molecule",
+                                max_length=100
+                            )
+    smiles: Optional[str] = Field(
+                                None,
+                                description="The SMILES representation of the molecule",
+                                max_length=255
+                            )

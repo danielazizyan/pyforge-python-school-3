@@ -1,8 +1,8 @@
-version: '3.8'
-
 services:
   web1:
-    build: ./src
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
     volumes:
       - ./src:/app/src
     environment:
@@ -12,7 +12,9 @@ services:
       - .env
 
   web2:
-    build: ./src
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
     volumes:
       - ./src:/app/src
     environment:

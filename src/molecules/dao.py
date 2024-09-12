@@ -1,4 +1,3 @@
-from sqlalchemy import delete, update
 from sqlalchemy.future import select
 from src.molecules.models import Molecule
 from src.database import async_session_maker
@@ -26,57 +25,36 @@ class MoleculeDAO(BaseDAO):
 
     @classmethod
     async def find_full_data(cls, mol_id: int):
-        async with async_session_maker() as session:
-            query = select(cls.model).filter_by(mol_id=mol_id)
-            logger.debug(f"Executing query: {query}")
-            result = await session.execute(query)
-            molecule_info = result.scalar_one_or_none()
-            if not molecule_info:
-                return None
-            molecule_data = molecule_info.__dict__
-            return molecule_data
+        molecule_info = await cls.find_one_or_none(mol_id=mol_id)
+        if not molecule_info:
+            return None
+        molecule_data = molecule_info.__dict__
+        logger.debug(f"Found molecule: {molecule_data}")
+        return molecule_data
 
     @classmethod
     async def add_molecule(cls, **molecule_data: dict):
-        async with async_session_maker() as session:
-            async with session.begin():
-                new_molecule = cls.model(**molecule_data)
-                session.add(new_molecule)
-                logger.debug(f"Adding molecule: {new_molecule}")
-                await session.flush()
-                new_molecule_id = new_molecule.mol_id
-                await session.commit()
-                return new_molecule_id
+        new_molecule = await cls.add(**molecule_data)
+        logger.debug(f"Added molecule: {new_molecule}")
+        return new_molecule.mol_id
 
     @classmethod
     async def delete_molecule_by_id(cls, mol_id: int):
-        async with async_session_maker() as session:
-            async with session.begin():
-                query = select(cls.model).filter_by(mol_id=mol_id)
-                logger.debug(f"Executing query: {query}")
-                result = await session.execute(query)
-                molecule_to_delete = result.scalar_one_or_none()
-                if not molecule_to_delete:
-                    return None
-                logger.debug(f"Deleting molecule with ID {mol_id}")
-                await session.execute(delete(cls.model).filter_by(mol_id=mol_id))
-                await session.commit()
-                return mol_id
+        result = await cls.delete(mol_id=mol_id)
+        if result == 0:
+            logger.debug(f"No molecule found with ID {mol_id} to delete.")
+            return None
+        logger.debug(f"Deleted molecule with ID {mol_id}")
+        return mol_id
 
     @classmethod
     async def update_molecule(cls, mol_id: int, **updated_data: dict):
-        async with async_session_maker() as session:
-            async with session.begin():
-                query = (
-                    update(cls.model)
-                    .where(cls.model.mol_id == mol_id)
-                    .values(**updated_data)
-                    .execution_options(synchronize_session="fetch")
-                )
-                logger.debug(f"Executing query: {query}")
-                result = await session.execute(query)
-                await session.commit()
-                return result.rowcount
+        result = await cls.update({'mol_id': mol_id}, **updated_data)
+        if result == 0:
+            logger.debug(f"No molecule found with ID {mol_id} to update.")
+            return None
+        logger.debug(f"Updated molecule with ID {mol_id}")
+        return result
 
     @classmethod
     async def search_molecule(cls, substructure_smiles: str):
