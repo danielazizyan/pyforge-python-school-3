@@ -40,4 +40,9 @@ logging.basicConfig(
 if os.getenv('PYTEST_CURRENT_TEST'):
     settings.REDIS_HOST = 'localhost'
 
-redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0, decode_responses=True)
+redis_client = redis.Redis(
+    host=settings.REDIS_HOST,
+    port=6379,
+    db=0,
+    decode_responses=True
+)
