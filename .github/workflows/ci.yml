@@ -6,6 +6,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -28,6 +34,7 @@ jobs:
         echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
         echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
         echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+        echo "PYTEST_CURRENT_TEST=true" >> $GITHUB_ENV
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -48,3 +55,8 @@ jobs:
 
     - name: Run flake8
       run: flake8 src tests
+
+    - name: Clean up Docker resources
+      run: |
+        docker stop postgres_test
+        docker rm postgres_test

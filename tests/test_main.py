@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from src.main import app
 from src.molecules.dao import MoleculeDAO
+from src.config import redis_client
 from sqlalchemy.exc import IntegrityError
 
 
@@ -206,10 +207,10 @@ async def test_delete_molecule_by_id():
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_search_molecule():
-    molecule_data = {"name": "MoleculeToSearch", "smiles": "C=C"}
+async def test_search_molecule_with_cache():
+    molecule_data = {"name": "CachedMolecule", "smiles": "C=C"}
 
-    # Clean up and add the molecule
+    # Ensure the molecule is not already in the DB
     await MoleculeDAO.delete(smiles=molecule_data["smiles"])
     await MoleculeDAO.add_molecule(**molecule_data)
 
@@ -218,10 +219,32 @@ async def test_search_molecule():
         base_url="http://testserver"
     ) as ac:
         search_params = {"substructure_smiles": "C"}
+
+        # First request (should hit the database)
         response = await ac.get("/molecules/search", params=search_params)
         assert response.status_code == 200
         data = response.json()
         assert len(data) > 0, "Molecules should be found with the substructure 'C'."
 
-    # Clean up after test
+        # Verify that the result was cached
+        cache_key = f"search:{search_params['substructure_smiles']}"
+        cached_result = redis_client.get(cache_key)
+        assert cached_result is not None, "Search result should be cached in Redis."
+
+        # Second request (should return the cached result)
+        response = await ac.get("/molecules/search", params=search_params)
+        assert response.status_code == 200
+        cached_data = response.json()
+        assert len(cached_data) > 0, (
+            "Cached molecules should be found with the substructure 'C'."
+        )
+
+        # Verify that the second request uses the cache
+        cached_result_after = redis_client.get(cache_key)
+        assert cached_result_after is not None, (
+            "The cached result should still be in Redis."
+        )
+
+    # Clean up after the test
     await MoleculeDAO.delete(smiles=molecule_data["smiles"])
+    redis_client.delete(cache_key)

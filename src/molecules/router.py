@@ -4,6 +4,9 @@ from src.molecules.request_body import RBMolecule
 from src.molecules.schema import MoleculeResponse, MoleculeAdd, MoleculeUpdate
 from rdkit import Chem
 import logging
+import json
+from src.config import redis_client
+
 
 router = APIRouter(prefix="/molecules", tags=["molecules"])
 
@@ -62,6 +65,13 @@ async def search_molecule(substructure_smiles: str):
     """
 
     logger.info(f"Searching for molecules with substructure: {substructure_smiles}")
+
+    cache_key = f"search:{substructure_smiles}"
+    cached_result = redis_client.get(cache_key)
+    if cached_result:
+        logger.info(f"Returning cached result for substructure: {substructure_smiles}")
+        return json.loads(cached_result)
+
     try:
         if Chem.MolFromSmiles(substructure_smiles) is None:
             logger.warning(f"Invalid SMILES structure: {substructure_smiles}")
@@ -73,9 +83,16 @@ async def search_molecule(substructure_smiles: str):
         matches = await MoleculeDAO.search_molecule(
             substructure_smiles=substructure_smiles
             )
+
         if matches:
+            matches = [MoleculeResponse.model_validate(mol) for mol in matches]
+            redis_client.setex(
+                cache_key,
+                600,
+                json.dumps([mol.model_dump() for mol in matches])
+            )
             logger.info(
-                f"Found {len(matches)} molecules matching substructure"
+                f"Found and cached {len(matches)} molecules matching substructure"
                 f"{substructure_smiles}."
             )
             return matches

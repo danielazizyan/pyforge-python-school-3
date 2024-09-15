@@ -1,5 +1,6 @@
 import os
 import logging
+import redis
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,7 @@ class Settings(BaseSettings):
     DB_NAME: str
     DB_USER: str
     DB_PASSWORD: str
+    REDIS_HOST: str = "redis"
     # This ensures that .env variables are automatically loaded
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
@@ -34,3 +36,8 @@ logging.basicConfig(
         logging.FileHandler("app.log")
     ]
 )
+
+if os.getenv('PYTEST_CURRENT_TEST'):
+    settings.REDIS_HOST = 'localhost'
+
+redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0, decode_responses=True)
