@@ -3,6 +3,7 @@ alembic==1.13.2
 amqp==5.2.0
 annotated-types==0.7.0
 anyio==4.4.0
+asgiref==3.8.1
 asyncpg==0.29.0
 billiard==4.2.0
 celery==5.4.0
@@ -31,6 +32,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 mccabe==0.7.0
 mdurl==0.1.2
+nest-asyncio==1.6.0
 numpy==1.26.4
 packaging==24.1
 pillow==10.4.0

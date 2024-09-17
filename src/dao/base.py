@@ -1,16 +1,13 @@
 import logging
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select
 from sqlalchemy import update as sqlalchemy_update, delete as sqlalchemy_delete
 from src.database import async_session_maker
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 logger = logging.getLogger(__name__)
 
 
 class BaseDAO:
-
     """
     A generic Data Access Object (DAO) class providing common database operations
     such as adding, updating, deleting, and retrieving records.
@@ -22,27 +19,7 @@ class BaseDAO:
     model = None
 
     @classmethod
-    async def _commit(cls, session: AsyncSession):
-
-        """
-        Commits the current transaction. If an error occurs, rolls back the transaction.
-
-        Parameters:
-            session (AsyncSession): The current database session.
-
-        Raises:
-            SQLAlchemyError: If there is an error during the commit.
-        """
-
-        try:
-            await session.commit()
-        except SQLAlchemyError as e:
-            await session.rollback()
-            raise e
-
-    @classmethod
     async def find_one_or_none_by_id(cls, data_id: int):
-
         """
         Finds a single record by its primary key ID. Returns None if no record is found.
 
@@ -61,7 +38,6 @@ class BaseDAO:
 
     @classmethod
     async def find_one_or_none(cls, **filter_by):
-
         """
         Finds a single record based on the specified filters.
         Returns None if no record is found.
@@ -81,7 +57,6 @@ class BaseDAO:
 
     @classmethod
     async def find_all(cls, **filter_by):
-
         """
         Finds all records that match the given filters.
 
@@ -100,7 +75,6 @@ class BaseDAO:
 
     @classmethod
     async def add(cls, **values):
-
         """
         Adds a new record to the database.
 
@@ -116,12 +90,10 @@ class BaseDAO:
                 new_instance = cls.model(**values)
                 session.add(new_instance)
                 logger.debug(f"Adding instance: {new_instance}")
-                await cls._commit(session)
                 return new_instance
 
     @classmethod
     async def add_many(cls, instances: list[dict]):
-
         """
         Adds multiple new records to the database.
 
@@ -137,12 +109,10 @@ class BaseDAO:
                 new_instances = [cls.model(**values) for values in instances]
                 session.add_all(new_instances)
                 logger.debug(f"Adding instances: {new_instances}")
-                await cls._commit(session)
                 return new_instances
 
     @classmethod
-    async def update(cls, filter_by, **values):
-
+    async def update(cls, filter_by: dict, **values):
         """
         Updates records that match the given filters with the provided values.
 
@@ -164,12 +134,10 @@ class BaseDAO:
                 )
                 logger.debug(f"Executing query: {query}")
                 result = await session.execute(query)
-                await cls._commit(session)
                 return result.rowcount
 
     @classmethod
     async def delete(cls, delete_all: bool = False, **filter_by):
-
         """
         Deletes records that match the given filters.
         If no filters are provided, raises an error.
@@ -185,16 +153,14 @@ class BaseDAO:
             ValueError: If `delete_all` is False and no filters are provided.
         """
 
-        if delete_all is False:
-            if not filter_by:
-                raise ValueError(
-                    "You need to provide at least one parameter to delete."
-                )
+        if delete_all is False and not filter_by:
+            raise ValueError(
+                "You need to provide at least one parameter to delete."
+            )
 
         async with async_session_maker() as session:
             async with session.begin():
                 query = sqlalchemy_delete(cls.model).filter_by(**filter_by)
                 logger.debug(f"Executing query: {query}")
                 result = await session.execute(query)
-                await cls._commit(session)
                 return result.rowcount

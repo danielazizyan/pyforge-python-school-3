@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from src.molecules.dao import MoleculeDAO
 from src.molecules.request_body import RBMolecule
 from src.molecules.schema import MoleculeResponse, MoleculeAdd, MoleculeUpdate
-from rdkit import Chem
 import logging
 import json
 from src.config import redis_client
@@ -47,7 +46,6 @@ async def get_all_molecules(
     return molecule_list
 
 
-# Modify the search endpoint
 @router.post(
     "/search",
     summary="Initiate substructure search",
@@ -65,7 +63,6 @@ async def initiate_substructure_search(substructure_smiles: str):
     """
     logger.info(f"Initiating substructure search for: {substructure_smiles}")
 
-    # Check if result is already cached
     cache_key = f"search:{substructure_smiles}"
     cached_result = redis_client.get(cache_key)
     if cached_result:
@@ -73,7 +70,6 @@ async def initiate_substructure_search(substructure_smiles: str):
         result = json.loads(cached_result)
         return {"status": "Task completed", "result": result}
 
-    # Start the Celery task
     task = substructure_search_task.delay(substructure_smiles)
 
     logger.info(f"Substructure search task initiated with task_id: {task.id}")
@@ -111,7 +107,6 @@ async def get_substructure_search_result(task_id: str):
         return {"task_id": task_id, "status": "Task completed", "result": result}
     elif task_result.state == 'FAILURE':
         logger.error(f"Task {task_id} failed with exception: {task_result.result}")
-        # Retrieve exception information
         exc_message = str(task_result.result)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

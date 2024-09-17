@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from src.molecules.models import Molecule
-from src.database import async_session_maker
+from src.database import async_session_maker, sync_session_maker
 from src.dao.base import BaseDAO
 from rdkit import Chem
 import logging
@@ -57,22 +57,15 @@ class MoleculeDAO(BaseDAO):
         return result
 
     @classmethod
-    async def search_molecule(cls, substructure_smiles: str):
-        async with async_session_maker() as session:
-            substructure = Chem.MolFromSmiles(substructure_smiles)
+    def search_molecule(cls, substructure_smiles: str):
+        substructure = Chem.MolFromSmiles(substructure_smiles)
+        if substructure is None:
+            raise ValueError("Invalid substructure SMILES")
 
-            query = select(cls.model)
-            logger.debug(f"Executing query: {query}")
-            results = await session.execute(query)
-            molecules = results.scalars().all()
-
+        with sync_session_maker() as session:
+            molecules = session.query(cls.model).all()
             matches = []
             for molecule in molecules:
                 if Chem.MolFromSmiles(molecule.smiles).HasSubstructMatch(substructure):
                     matches.append(molecule)
-
-            logger.debug(
-                f"Found {len(matches)} molecules matching substructure "
-                f"{substructure_smiles}."
-            )
             return matches

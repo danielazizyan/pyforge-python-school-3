@@ -24,7 +24,7 @@ jobs:
           -e POSTGRES_DB=${{ secrets.DB_NAME }} \
           -p 5433:5432 postgres:latest
 
-    - name: Wait for Postgres to be ready
+    - name: Wait for Postgres and Redis to be ready
       run: sleep 30
 
     - name: Set environment variables
@@ -50,6 +50,10 @@ jobs:
     - name: Run migrations
       run: alembic upgrade head
 
+    - name: Start Celery worker
+      run: |
+        celery -A src.tasks.celery_app worker --loglevel=info &
+
     - name: Run tests
       run: pytest
 
@@ -60,3 +64,4 @@ jobs:
       run: |
         docker stop postgres_test
         docker rm postgres_test
+        pkill -f 'celery'

@@ -45,11 +45,10 @@ logging.basicConfig(
 
 if os.getenv('PYTEST_CURRENT_TEST'):
     settings.REDIS_HOST = 'localhost'
-    settings.DB_HOST = 'localhost'  # Ensure the DB host is localhost during tests
-    settings.DB_PORT = 5433  # Ensure the DB port is correct
-    settings.CELERY_TASK_ALWAYS_EAGER = True  # Run Celery tasks eagerly
+    settings.DB_HOST = 'localhost'
+    settings.DB_PORT = 5433
+    settings.CELERY_TASK_ALWAYS_EAGER = True
 
-# Re-instantiate CELERY_BROKER_URL and CELERY_RESULT_BACKEND if REDIS_HOST changed
 settings.CELERY_BROKER_URL = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
 settings.CELERY_RESULT_BACKEND = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
 
