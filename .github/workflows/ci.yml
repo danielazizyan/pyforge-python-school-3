@@ -52,7 +52,7 @@ jobs:
 
     - name: Start Celery worker
       run: |
-        celery -A src.tasks.celery_app worker --loglevel=info &
+        celery -A src.tasks.celery_worker worker --loglevel=info &
 
     - name: Run tests
       run: pytest
@@ -62,6 +62,6 @@ jobs:
 
     - name: Clean up Docker resources
       run: |
-        docker stop postgres_test || true
-        docker rm postgres_test || true
-        pkill -f 'celery' || true
+        docker stop postgres_test
+        docker rm postgres_test
+        pkill -f 'celery'
