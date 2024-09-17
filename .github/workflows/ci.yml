@@ -62,6 +62,6 @@ jobs:
 
     - name: Clean up Docker resources
       run: |
-        docker stop postgres_test
-        docker rm postgres_test
-        pkill -f 'celery'
+        docker stop postgres_test || true
+        docker rm postgres_test || true
+        pkill -f 'celery' || true
