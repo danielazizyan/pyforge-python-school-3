@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+
+    CELERY_BROKER_URL: str = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+    CELERY_RESULT_BACKEND: str = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+
     # This ensures that .env variables are automatically loaded
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
@@ -39,10 +45,17 @@ logging.basicConfig(
 
 if os.getenv('PYTEST_CURRENT_TEST'):
     settings.REDIS_HOST = 'localhost'
+    settings.DB_HOST = 'localhost'  # Ensure the DB host is localhost during tests
+    settings.DB_PORT = 5433  # Ensure the DB port is correct
+    settings.CELERY_TASK_ALWAYS_EAGER = True  # Run Celery tasks eagerly
+
+# Re-instantiate CELERY_BROKER_URL and CELERY_RESULT_BACKEND if REDIS_HOST changed
+settings.CELERY_BROKER_URL = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
+settings.CELERY_RESULT_BACKEND = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
 
 redis_client = redis.Redis(
     host=settings.REDIS_HOST,
-    port=6379,
+    port=settings.REDIS_PORT,
     db=0,
     decode_responses=True
 )

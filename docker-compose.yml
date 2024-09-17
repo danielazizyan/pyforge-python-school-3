@@ -23,6 +23,22 @@ services:
     env_file:
       - .env
 
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+    command: celery -A src.tasks worker --loglevel=info
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+
   redis:
     image: "redis:alpine"
     ports:

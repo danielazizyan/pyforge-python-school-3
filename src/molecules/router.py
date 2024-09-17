@@ -6,6 +6,9 @@ from rdkit import Chem
 import logging
 import json
 from src.config import redis_client
+from src.tasks import substructure_search_task
+from celery.result import AsyncResult
+from src.celery_worker import celery
 
 
 router = APIRouter(prefix="/molecules", tags=["molecules"])
@@ -44,70 +47,79 @@ async def get_all_molecules(
     return molecule_list
 
 
-@router.get(
-        "/search",
-        summary="Substructure search for molecules",
-        response_description="List of molecules that match the substructure"
-        )
-async def search_molecule(substructure_smiles: str):
-
+# Modify the search endpoint
+@router.post(
+    "/search",
+    summary="Initiate substructure search",
+    response_description="Task ID for the initiated search or cached result"
+)
+async def initiate_substructure_search(substructure_smiles: str):
     """
-    Search for molecules containing a specific substructure.
+    Initiate a substructure search task or return cached result.
 
     Parameters:
     - substructure_smiles: The SMILES string representing the substructure to search for.
 
     Returns:
-    - A list of molecules that contain the given substructure.
-
-    Raises:
-    - HTTPException: If the SMILES string is invalid or if no molecules are found.
+    - A task ID to check the status and get results of the search, or the cached result.
     """
+    logger.info(f"Initiating substructure search for: {substructure_smiles}")
 
-    logger.info(f"Searching for molecules with substructure: {substructure_smiles}")
-
+    # Check if result is already cached
     cache_key = f"search:{substructure_smiles}"
     cached_result = redis_client.get(cache_key)
     if cached_result:
         logger.info(f"Returning cached result for substructure: {substructure_smiles}")
-        return json.loads(cached_result)
+        result = json.loads(cached_result)
+        return {"status": "Task completed", "result": result}
 
-    try:
-        if Chem.MolFromSmiles(substructure_smiles) is None:
-            logger.warning(f"Invalid SMILES structure: {substructure_smiles}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This SMILES has an invalid structure"
-                )
+    # Start the Celery task
+    task = substructure_search_task.delay(substructure_smiles)
 
-        matches = await MoleculeDAO.search_molecule(
-            substructure_smiles=substructure_smiles
-            )
+    logger.info(f"Substructure search task initiated with task_id: {task.id}")
+    return {"task_id": task.id,  "status": task.status}
 
-        if matches:
-            matches = [MoleculeResponse.model_validate(mol) for mol in matches]
-            redis_client.setex(
-                cache_key,
-                600,
-                json.dumps([mol.model_dump() for mol in matches])
-            )
-            logger.info(
-                f"Found and cached {len(matches)} molecules matching substructure"
-                f"{substructure_smiles}."
-            )
-            return matches
-        else:
-            logger.info(f"No molecules found with substructure {substructure_smiles}.")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No molecules found with the given substructure"
-            )
-    except ValueError as e:
-        logger.error(f"ValueError during substructure search: {e}")
+
+@router.get(
+    "/search/result/{task_id}",
+    summary="Get substructure search results",
+    response_description="Results of the substructure search"
+)
+async def get_substructure_search_result(task_id: str):
+    """
+    Get the result of a substructure search task.
+
+    Parameters:
+    - task_id: The ID of the task to check.
+
+    Returns:
+    - The result of the substructure search if completed.
+
+    Raises:
+    - HTTPException: If the task is not found or failed.
+    """
+    logger.info(f"Fetching result for task_id: {task_id}")
+
+    task_result = AsyncResult(task_id, app=celery)
+
+    if task_result.state == 'PENDING':
+        logger.info(f"Task {task_id} is still pending.")
+        return {"task_id": task_id, "status": "Task is still processing"}
+    elif task_result.state == 'SUCCESS':
+        logger.info(f"Task {task_id} completed successfully.")
+        result = json.loads(task_result.result)
+        return {"task_id": task_id, "status": "Task completed", "result": result}
+    elif task_result.state == 'FAILURE':
+        logger.error(f"Task {task_id} failed with exception: {task_result.result}")
+        # Retrieve exception information
+        exc_message = str(task_result.result)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Task failed: {exc_message}"
         )
+    else:
+        logger.info(f"Task {task_id} is in state: {task_result.state}.")
+        return {"task_id": task_id, "status": task_result.state}
 
 
 @router.get(

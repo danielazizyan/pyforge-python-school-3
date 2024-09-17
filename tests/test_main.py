@@ -4,6 +4,7 @@ from src.main import app
 from src.molecules.dao import MoleculeDAO
 from src.config import redis_client
 from sqlalchemy.exc import IntegrityError
+import asyncio
 
 
 @pytest.mark.asyncio(loop_scope="module")
@@ -207,44 +208,60 @@ async def test_delete_molecule_by_id():
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_search_molecule_with_cache():
-    molecule_data = {"name": "CachedMolecule", "smiles": "C=C"}
+async def test_substructure_search_with_caching_and_exceptions():
+    molecule_data = {"name": "TestMoleculeForSearch", "smiles": "CCO"}
 
-    # Ensure the molecule is not already in the DB
+    # Ensure the molecule is in the DB
     await MoleculeDAO.delete(smiles=molecule_data["smiles"])
     await MoleculeDAO.add_molecule(**molecule_data)
+
+    search_smiles = "CO"
+
+    # Clean up cache before test
+    cache_key = f"search:{search_smiles}"
+    redis_client.delete(cache_key)
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver"
     ) as ac:
-        search_params = {"substructure_smiles": "C"}
-
-        # First request (should hit the database)
-        response = await ac.get("/molecules/search", params=search_params)
+        # First request (should initiate task)
+        response = await ac.post("/molecules/search", params={"substructure_smiles": search_smiles})
         assert response.status_code == 200
         data = response.json()
-        assert len(data) > 0, "Molecules should be found with the substructure 'C'."
+        if "task_id" in data:
+            task_id = data["task_id"]
 
-        # Verify that the result was cached
-        cache_key = f"search:{search_params['substructure_smiles']}"
-        cached_result = redis_client.get(cache_key)
-        assert cached_result is not None, "Search result should be cached in Redis."
+            # Poll for the result
+            for _ in range(10):
+                response = await ac.get(f"/molecules/search/result/{task_id}")
+                assert response.status_code == 200
+                result_data = response.json()
+                if result_data["status"] == "Task completed":
+                    assert len(result_data["result"]) > 0
+                    break
+                elif result_data["status"] == "Task failed":
+                    pytest.fail(f"Task failed: {result_data.get('detail', 'No detail')}")
+                else:
+                    await asyncio.sleep(1)
+            else:
+                pytest.fail("Substructure search task did not complete in time.")
+        else:
+            # Cached result
+            assert data["status"] == "Task completed"
+            assert len(data["result"]) > 0
 
-        # Second request (should return the cached result)
-        response = await ac.get("/molecules/search", params=search_params)
+        # Second request (should return cached result)
+        response = await ac.post("/molecules/search", params={"substructure_smiles": search_smiles})
         assert response.status_code == 200
-        cached_data = response.json()
-        assert len(cached_data) > 0, (
-            "Cached molecules should be found with the substructure 'C'."
-        )
-
-        # Verify that the second request uses the cache
-        cached_result_after = redis_client.get(cache_key)
-        assert cached_result_after is not None, (
-            "The cached result should still be in Redis."
-        )
+        data = response.json()
+        assert data["status"] == "Task completed"
+        assert len(data["result"]) > 0
 
     # Clean up after the test
     await MoleculeDAO.delete(smiles=molecule_data["smiles"])
     redis_client.delete(cache_key)
+
+    # Verify that the molecule is actually deleted after the test
+    deleted_molecule = await MoleculeDAO.find_one_or_none(smiles=molecule_data["smiles"])
+    assert deleted_molecule is None, "Molecule should be deleted after the test"
