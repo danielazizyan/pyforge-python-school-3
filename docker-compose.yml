@@ -1,8 +1,8 @@
-version: '3.8'
-
 services:
   web1:
-    build: ./src
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
     volumes:
       - ./src:/app/src
     environment:
@@ -12,7 +12,9 @@ services:
       - .env
 
   web2:
-    build: ./src
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
     volumes:
       - ./src:/app/src
     environment:
@@ -20,6 +22,11 @@ services:
       PYTHONPATH: /app 
     env_file:
       - .env
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
 
   nginx:
     image: nginx:latest

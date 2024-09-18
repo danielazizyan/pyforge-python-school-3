@@ -1,18 +1,14 @@
 import asyncio
-import os
+import sys
+from os.path import dirname, abspath
 from logging.config import fileConfig
-
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
 from alembic import context
-
-import sys
-from os.path import dirname, abspath
-
 from src.database import Base
 from src.molecules.models import Molecule  # noqa: F401
+from pydantic_settings import BaseSettings
 
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
@@ -20,20 +16,28 @@ sys.path.insert(0, dirname(dirname(abspath(__file__))))
 # which provides access to the values within the .ini file in use.
 config = context.config
 
-# Set the SQLAlchemy URL from environment variables
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
 
-# Ensure all required environment variables are set
-if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-    raise EnvironmentError("One or more required environment variables are missing.")
+# Set the SQLAlchemy URL from environment variables
+class MigrationSettings(BaseSettings):
+    DB_HOST: str
+    DB_PORT: int
+    DB_NAME: str
+    DB_USER: str
+    DB_PASSWORD: str
+
+    class Config:
+        env_file = ".env"
+
+
+# Instantiate settings
+migration_settings = MigrationSettings()
 
 DATABASE_URL = (
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"postgresql+asyncpg://{migration_settings.DB_USER}:{migration_settings.DB_PASSWORD}@"
+    f"{migration_settings.DB_HOST}:{migration_settings.DB_PORT}/"
+    f"{migration_settings.DB_NAME}"
 )
+
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.

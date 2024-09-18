@@ -17,6 +17,8 @@ class MoleculeBase(BaseModel):
             raise ValueError("This SMILES has an invalid structure")
         return value
 
+    model_config = {'from_attributes': True}
+
 
 class MoleculeResponse(MoleculeBase):
     mol_id: int
