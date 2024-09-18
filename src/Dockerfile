@@ -1,6 +1,6 @@
 FROM continuumio/miniconda3
 
-WORKDIR /app
+WORKDIR /app/src
 
 RUN conda install -c conda-forge rdkit
 
