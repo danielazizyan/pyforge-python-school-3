@@ -10,6 +10,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Set up Docker
+      run: |
+        docker run --name postgres_test -d \
+          -e POSTGRES_USER=${{ secrets.DB_USER }} \
+          -e POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }} \
+          -e POSTGRES_DB=${{ secrets.DB_NAME }} \
+          -p 5433:5432 postgres:latest
+
+    - name: Wait for Postgres to be ready
+      run: sleep 30
+
+    - name: Set environment variables
+      run: |
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_PORT=5433" >> $GITHUB_ENV
+        echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
+        echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -20,6 +39,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r src/requirements.txt
         pip install flake8
+
+    - name: Run migrations
+      run: alembic upgrade head
+
+    - name: Populate database
+      run: python populate_db.py
 
     - name: Run tests
       run: pytest
