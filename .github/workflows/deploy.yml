@@ -80,7 +80,8 @@ jobs:
             python3 -m venv venv
             source venv/bin/activate
             pip install --upgrade pip
-            pip install -r requirements.txt
+            pip install --no-cache-dir -r requirements.txt
+            pip show SQLAlchemy
 
       - name: Run Docker Compose on EC2
         uses: appleboy/ssh-action@master
@@ -92,6 +93,31 @@ jobs:
             cd /home/ubuntu/app/
             sudo docker-compose down
             sudo docker-compose up -d --build
+
+      - name: Wait for PostgreSQL to be ready
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Waiting for PostgreSQL to be ready..."
+            until nc -z -v -w30 localhost 5432
+            do
+              echo "PostgreSQL is unavailable - sleeping"
+              sleep 1
+            done
+            echo "PostgreSQL is up - continuing..."
+
+      - name: Apply database migrations
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/app
+            source venv/bin/activate
             alembic upgrade head
 
       - name: Confirm Application is Running
