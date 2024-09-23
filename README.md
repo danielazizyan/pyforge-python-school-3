@@ -92,16 +92,3 @@ As part of our homeworks, we will try to build a web service for storing and sub
 
 - **Celery** to speed up queries
 <img title="a title" alt="Alt text" src="./images/9.png">
-
-## Cloud Deployment
-
-I deployed the application to an AWS EC2 instance using the GitHub Actions workflow. The workflow:
-
-- Configures the AWS credentials from GitHub secrets to allow SSH access to the EC2 instance.
-- Connects to the EC2 instance via SSH and installs Docker and Docker Compose.
-- Copies the application files from the GitHub repository to the EC2 instance using SCP.
-- Installs Python dependencies in a virtual environment.
-- Builds and runs the application using Docker Compose. Runs Alembic migrations to set up the database schema.
-- Verifies that the application is running by sending a request to the local server.
-
-Additionally, I configured the EC2 instance with the necessary security group settings to allow inbound traffic, ensuring the application is publicly accessible via the instance's public IP address.

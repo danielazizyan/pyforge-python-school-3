@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: ./src/Dockerfile
-    ports:
-      - "8001:8000"
     volumes:
       - ./src:/app/src
     environment:
@@ -17,8 +15,6 @@ services:
     build:
       context: .
       dockerfile: ./src/Dockerfile
-    ports:
-      - "8002:8000"
     volumes:
       - ./src:/app/src
     environment:
