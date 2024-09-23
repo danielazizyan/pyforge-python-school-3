@@ -102,7 +102,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo "Waiting for PostgreSQL to be ready..."
-            until nc -z -v -w30 postgres_smiles_app 5432
+            until nc -z -v -w30 postgres_smiles_app 5433
             do
               echo "PostgreSQL is unavailable - sleeping"
               sleep 1
