@@ -1,8 +1,8 @@
 name: Deploy to EC2
 
 on:
-  push:
-    branches: [main]
+  [push, pull_request]:
+    branches: [main, develop]
 
 jobs:
   deploy:
@@ -51,8 +51,21 @@ jobs:
             ./docker-compose.yml
             ./requirements.txt
             ./.dockerignore
-            ./.env
           target: "/home/ubuntu/app/"
+
+      - name: Create .env on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "DB_HOST=localhost" >> /home/ubuntu/app/.env
+            echo "DB_PORT=5433" >> /home/ubuntu/app/.env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> /home/ubuntu/app/.env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> /home/ubuntu/app/.env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> /home/ubuntu/app/.env
+            chmod 600 /home/ubuntu/app/.env
 
 
       - name: Set Up Python Virtual Environment and Install Dependencies
