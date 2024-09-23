@@ -57,6 +57,7 @@ jobs:
             ./requirements.txt
             ./.dockerignore
           target: "/home/ubuntu/app/"
+        working-directory: ${{ github.workspace }}
 
       - name: Create .env on EC2
         uses: appleboy/ssh-action@master
