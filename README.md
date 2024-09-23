@@ -95,11 +95,11 @@ As part of our homeworks, we will try to build a web service for storing and sub
 
 ## Cloud Deployment
 
-I deployed the application to an AWS EC2 instance using the GitHub Actions workflow. The workflow:
+I deployed the application to an AWS EC2 instance using the GitHub Actions workflow, which
 
 - Configures the AWS credentials from GitHub secrets to allow SSH access to the EC2 instance.
 - Connects to the EC2 instance via SSH and installs Docker and Docker Compose.
-- Copies the application files from the GitHub repository to the EC2 instance using SCP.
+- Copies the application files by cloning the GitHub repository.
 - Installs Python dependencies in a virtual environment.
 - Builds and runs the application using Docker Compose. Runs Alembic migrations to set up the database schema.
 - Verifies that the application is running by sending a request to the local server.
