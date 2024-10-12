@@ -1,0 +1,11 @@
+FROM apache/airflow:2.8.1
+
+WORKDIR /opt/airflow
+
+COPY requirements_airflow.txt .
+RUN pip install --no-cache-dir -r requirements_airflow.txt -c https://raw.githubusercontent.com/apache/airflow/constraints-2.8.1/constraints-3.8.txt
+
+
+COPY dags /opt/airflow/dags
+
+EXPOSE 8080
